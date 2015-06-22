@@ -10,24 +10,34 @@ fn print_board(board: &Vec<Vec<u8>>) {
 	}
 }
 
-fn gen_set() -> HashSet<u8> {
-	let numbers: HashSet<u8> = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9].iter().cloned().collect();
-
-	numbers
-}
-
-fn get_col_at(index: usize, grid: &Vec<Vec<u8>>) -> Vec<u8> {
-	let mut values = Vec::new();
+fn get_col_at(index: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
+	let mut values = HashSet::new();
 
 	for row in grid.iter() {
-		values.push(row[index]);
+		match row[index] as u8 {
+			0 => continue,
+			_ => values.insert(row[index])
+		};
+	}
+
+	values
+}
+
+fn get_row_at(index: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
+	let mut values = HashSet::new();
+
+	for &value in grid[index].iter() {
+		match value as u8 {
+			0 => continue,
+			_ => values.insert(value)
+		};
 	}
 
 	values
 }
 
 // Get all non-zero numbers inside a block
-fn get_block_for(x: usize, y: usize, grid: &Vec<Vec<u8>>) -> Vec<u8> {
+fn get_block_at(x: usize, y: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
 	let mut block = Vec::new();
 
 	// Figure out top left corner of block
@@ -47,72 +57,47 @@ fn get_block_for(x: usize, y: usize, grid: &Vec<Vec<u8>>) -> Vec<u8> {
 		block.push(row[left + 2].clone());
 	}
 
-	let mut filtered_block = Vec::new();
+	let mut filtered_block = HashSet::new();
 
 	// Filter out zeroes
 	for &value in block.iter() {
-		filtered_block.push(match value as u8 {
+		match value as u8 {
 			0 => continue,
-			_ => value
-		});
+			_ => filtered_block.insert(value)
+		};
 	}
 
 	filtered_block
 }
 
-fn block_possibilities_for_cell(block: &Vec<u8>) -> HashSet<u8> {
-	let mut numbers = gen_set();
-
-	for value in block.iter() {
-		numbers.remove(value);
-	}
-
-	numbers
-}
-
-fn col_possibilities_for_cell(col: &Vec<u8>) -> HashSet<u8> {
-	let mut numbers = gen_set();
-
-	for value in col.iter() {
-		numbers.remove(value);
-	}
-
-	numbers
-}
-
-fn row_possibilities_for_cell(row: &Vec<u8>) -> HashSet<u8> {
-	let mut numbers = gen_set();
-
-	for value in row.iter() {
-		numbers.remove(value);
-	}
-
-	numbers
-}
-
-fn solve_board_iteration(input: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+fn solve_board_iteration(input: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
 	let mut solves = 0;
 
-	let board = input.clone();
-	let mut new_board = board.clone();
+	// let grid = input.clone();
+	let mut new_board = input.clone();
 
-	for (i, row) in input.iter().enumerate() {
-		for (j, &cell) in row.iter().enumerate() {
-			let col = &get_col_at(j, &board);
-			let block = &get_block_for(i, j, &board);
+	for (y, row) in input.iter().enumerate() {
+		for (x, &cell) in row.iter().enumerate() {
+			// let col = &get_col_at(j, &input);
+			// let block = &get_block_for(i, j, &input);
 
 			if cell == 0 {
-				let row_possibilities = row_possibilities_for_cell(row);
-				let col_possibilities = col_possibilities_for_cell(col);
-				let blk_possibilities = block_possibilities_for_cell(block);
+				let mut possibilities: HashSet<u8> = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ].iter().cloned().collect();
 
-				let row_col_possibilities: HashSet<u8> = row_possibilities.intersection(&col_possibilities).cloned().collect();
-				let possibilities: HashSet<u8> = row_col_possibilities.intersection(&blk_possibilities).cloned().collect();
+				let block_values = get_block_at(x, y, &input);
+				let column_values = get_col_at(x, &input);
+				let row_values = get_row_at(y, &input);
+
+				possibilities = possibilities.difference(&block_values).cloned().collect();
+				possibilities = possibilities.difference(&column_values).cloned().collect();
+				possibilities = possibilities.difference(&row_values).cloned().collect();
 
 				if possibilities.len() == 1 {
-					let cell_value = possibilities.iter().nth(0).unwrap();
+					let cell_value = *possibilities.iter().nth(0).unwrap();
 
-					new_board[i][j] = *cell_value;
+					*(new_board.get_mut(y).unwrap().get_mut(x).unwrap()) = cell_value;
+
+					println!("Good solve at ({}, {}): {}", x, y, cell_value);
 
 					solves += 1;
 				}
@@ -120,34 +105,30 @@ fn solve_board_iteration(input: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
 				continue;
 			}
 		}
-	}
+	};
 
-	println!("{} cells solved", solves);
-
-	if solves == 0 {
-		println!("No more cells solved");		
-	}
+	println!("{} solves this iteration", solves);
 
 	new_board
 }
 
 fn main() {
 	let input_board = vec![
-		vec![ 0, 4, 3, 5, 0, 0, 0, 0, 2 ],
-		vec![ 0, 0, 2, 0, 0, 4, 0, 8, 3 ],
-		vec![ 0, 1, 0, 0, 0, 0, 6, 0, 0 ],
-		vec![ 0, 8, 0, 7, 3, 0, 0, 0, 5 ],
-		vec![ 2, 6, 0, 0, 4, 5, 0, 0, 0 ],
-		vec![ 1, 0, 0, 0, 0, 8, 0, 0, 0 ],
-		vec![ 0, 7, 0, 3, 0, 0, 0, 6, 0 ],
-		vec![ 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
-		vec![ 0, 0, 0, 6, 0, 7, 0, 0, 0 ]
+		vec![ 7,0,0,0,2,0,0,0,4 ],
+		vec![ 8,0,3,0,4,0,9,0,7 ],
+		vec![ 0,0,2,0,0,0,3,0,0 ],
+		vec![ 0,7,0,0,0,0,0,0,0 ],
+		vec![ 0,6,0,9,0,5,0,1,0 ],
+		vec![ 0,0,0,0,0,0,0,8,0 ],
+		vec![ 0,0,9,0,0,0,6,0,0 ],
+		vec![ 4,0,6,0,5,0,8,0,1 ],
+		vec![ 5,0,0,0,3,0,0,0,2 ],
 	];
 
 	let mut new_board: Vec<Vec<u8>> = input_board.clone();
 
-	for i in 1..100 {
-		new_board = solve_board_iteration(new_board);
+	for i in 1..5 {
+		new_board = solve_board_iteration(&new_board);
 
 		print_board(&new_board);
 	}
