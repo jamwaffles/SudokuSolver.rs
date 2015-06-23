@@ -2,11 +2,21 @@ use std::collections::HashSet;
 
 fn print_board(board: &Vec<Vec<u8>>) {
 	for (i, row) in board.iter().enumerate() {
-		for (j, &cell) in row.iter().enumerate() {
-			print!("{}, ", cell);
-		}
+		println!("{} {} {} ┃ {} {} {} ┃ {} {} {}", 
+			row[0],
+			row[1],
+			row[2],
+			row[3],
+			row[4],
+			row[5],
+			row[6],
+			row[7],
+			row[8]
+		);
 
-		println!("");
+		if i % 3 == 2 && i != 8 {
+			println!("━━━━━━╋━━━━━━━╋━━━━━━");
+		}
 	}
 }
 
@@ -70,44 +80,117 @@ fn get_block_at(x: usize, y: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
 	filtered_block
 }
 
-fn solve_board_iteration(input: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-	let mut solves = 0;
+// Get possibilities for a particular cell in the board
+fn get_possibilities_at(x: usize, y: usize, board: &Vec<Vec<u8>>) -> HashSet<u8> {
+	let mut possibilities: HashSet<u8> = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ].iter().cloned().collect();
 
-	// let grid = input.clone();
+	let block_values = get_block_at(x, y, &board);
+	let column_values = get_col_at(x, &board);
+	let row_values = get_row_at(y, &board);
+
+	// println!("    ({}, {}): {:?}", x, y, row_values);
+
+	possibilities = possibilities.difference(&block_values).cloned().collect();
+	possibilities = possibilities.difference(&column_values).cloned().collect();
+	possibilities = possibilities.difference(&row_values).cloned().collect();
+
+	possibilities
+}
+
+fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+	let mut solves = 0;
 	let mut new_board = input.clone();
 
 	for (y, row) in input.iter().enumerate() {
 		for (x, &cell) in row.iter().enumerate() {
-			// let col = &get_col_at(j, &input);
-			// let block = &get_block_for(i, j, &input);
+			// Already got a value for this cell
+			if cell > 0 {
+				continue;
+			}
 
-			if cell == 0 {
-				let mut possibilities: HashSet<u8> = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ].iter().cloned().collect();
+			let possibilities = get_possibilities_at(x, y, &input);
+			let mut filtered_possibilities = possibilities.clone();
 
-				let block_values = get_block_at(x, y, &input);
-				let column_values = get_col_at(x, &input);
-				let row_values = get_row_at(y, &input);
+			// See if the remaining possibilities can go anywhere else. If they can't, we've found the value for this cell
+			if possibilities.len() > 1 {
+				for poss in possibilities.iter() {
+					let mut multi_row: bool = false;
+					let mut multi_col: bool = false;
+					let mut multi_blk: bool = false;
 
-				possibilities = possibilities.difference(&block_values).cloned().collect();
-				possibilities = possibilities.difference(&column_values).cloned().collect();
-				possibilities = possibilities.difference(&row_values).cloned().collect();
+					// Can this value go anywhere else in the row?
+					for (row_x, value) in input[y].iter().enumerate() {
+						if row_x == x {
+							continue;
+						}
 
-				if possibilities.len() == 1 {
-					let cell_value = *possibilities.iter().nth(0).unwrap();
+						multi_row = get_possibilities_at(row_x, y, &input).contains(poss);
 
-					*(new_board.get_mut(y).unwrap().get_mut(x).unwrap()) = cell_value;
+						if multi_row {
+							break;
+						}
+					}
 
-					println!("Good solve at ({}, {}): {}", x, y, cell_value);
+					let mut col = Vec::new();
+
+					for row in input.iter() {
+						col.push(&row[y]);
+					}
+
+					// Can this value go anywhere else in the column?
+					for (col_y, value) in col.iter().enumerate() {
+						if col_y == y {
+							continue;
+						}
+
+						multi_col = get_possibilities_at(x, col_y, &input).contains(poss);
+
+						if multi_col {
+							break;
+						}
+					}
+
+					let left = x - (x % 3);
+					let top = y - (y % 3);
+
+					// Can this value go anywhere in the block it's in?
+					for block_y in (top..top + 3) {
+						for block_x in (left..left + 3) {
+							if (block_x == x && block_y == y) || input[block_y][block_x] > 0 {
+								continue;
+							}
+
+							multi_blk = get_possibilities_at(block_x, block_y, &input).contains(poss);
+
+							if multi_blk {
+								break;
+							}
+						}
+
+						if multi_blk {
+							break;
+						}
+					}
+
+					if multi_row && multi_col && multi_blk {
+						filtered_possibilities.remove(poss);
+					}
+				}
+
+				if filtered_possibilities.len() == 1 {
+					*(new_board.get_mut(y).unwrap().get_mut(x).unwrap()) = *filtered_possibilities.iter().nth(0).unwrap();
 
 					solves += 1;
 				}
-			} else {
-				continue;
+			} else if possibilities.len() == 1 {
+				*(new_board.get_mut(y).unwrap().get_mut(x).unwrap()) = *possibilities.iter().nth(0).unwrap();
+
+				solves += 1;
 			}
 		}
 	};
 
-	println!("{} solves this iteration", solves);
+	println!("{} solves this iteration:", solves);
 
 	new_board
 }
@@ -125,11 +208,19 @@ fn main() {
 		vec![ 5,0,0,0,3,0,0,0,2 ],
 	];
 
+	// let field = board_possibilities_field(&input_board);
+
 	let mut new_board: Vec<Vec<u8>> = input_board.clone();
 
-	for i in 1..5 {
-		new_board = solve_board_iteration(&new_board);
+	print_board(&new_board);
+
+	println!("---");
+
+	for i in 1..10 {
+		new_board = board_possibilities_field(&new_board);
 
 		print_board(&new_board);
+
+		println!("");
 	}
 }
