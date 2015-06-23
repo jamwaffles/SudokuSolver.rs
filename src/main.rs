@@ -97,7 +97,7 @@ fn get_possibilities_at(x: usize, y: usize, board: &Vec<Vec<u8>>) -> HashSet<u8>
 	possibilities
 }
 
-fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Option<Vec<Vec<u8>>> {
 	let mut solves = 0;
 	let mut new_board = input.clone();
 
@@ -190,9 +190,11 @@ fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
 		}
 	};
 
-	println!("{} solves this iteration:", solves);
-
-	new_board
+	if solves > 0 {
+		Some(new_board)
+	} else {
+		None
+	}
 }
 
 fn main() {
@@ -212,15 +214,31 @@ fn main() {
 
 	let mut new_board: Vec<Vec<u8>> = input_board.clone();
 
+	println!("Original problem:\n");
+
 	print_board(&new_board);
 
-	println!("---");
+	println!("");
 
-	for i in 1..10 {
-		new_board = board_possibilities_field(&new_board);
+	let mut num_iterations = 1;
 
-		print_board(&new_board);
+	loop {
+		match board_possibilities_field(&new_board) {
+			Some(updated) => {
+				new_board = updated;
+			},
+			None => {
+				println!("Solution complete:\n");
 
-		println!("");
-	}
+				print_board(&new_board);
+
+				break;
+			}
+		};
+
+		num_iterations += 1;
+	};
+
+	println!("");
+	println!("Solved problem in {} iterations", num_iterations);
 }
