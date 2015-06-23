@@ -26,20 +26,8 @@ fn get_col_at(index: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
 	for row in grid.iter() {
 		match row[index] as u8 {
 			0 => continue,
-			_ => values.insert(row[index])
-		};
-	}
-
-	values
-}
-
-fn get_row_at(index: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
-	let mut values = HashSet::new();
-
-	for &value in grid[index].iter() {
-		match value as u8 {
-			0 => continue,
-			_ => values.insert(value)
+			1...9 => values.insert(row[index]),
+			_ => panic!("Value out of bounds")
 		};
 	}
 
@@ -48,7 +36,7 @@ fn get_row_at(index: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
 
 // Get all non-zero numbers inside a block
 fn get_block_at(x: usize, y: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
-	let mut block = Vec::new();
+	let mut block = HashSet::new();
 
 	// Figure out top left corner of block
 	// Thanks to http://stackoverflow.com/a/13082705/383609 because I'm a dumbass
@@ -62,33 +50,21 @@ fn get_block_at(x: usize, y: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
 	rows.push(grid[top + 2].clone());
 
 	for row in rows.iter() {
-		block.push(row[left].clone());
-		block.push(row[left + 1].clone());
-		block.push(row[left + 2].clone());
+		block.insert(row[left].clone());
+		block.insert(row[left + 1].clone());
+		block.insert(row[left + 2].clone());
 	}
 
-	let mut filtered_block = HashSet::new();
-
-	// Filter out zeroes
-	for &value in block.iter() {
-		match value as u8 {
-			0 => continue,
-			_ => filtered_block.insert(value)
-		};
-	}
-
-	filtered_block
+	block
 }
 
 // Get possibilities for a particular cell in the board
 fn get_possibilities_at(x: usize, y: usize, board: &Vec<Vec<u8>>) -> HashSet<u8> {
 	let mut possibilities: HashSet<u8> = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ].iter().cloned().collect();
 
-	let block_values = get_block_at(x, y, &board);
-	let column_values = get_col_at(x, &board);
-	let row_values = get_row_at(y, &board);
-
-	// println!("    ({}, {}): {:?}", x, y, row_values);
+	let block_values: HashSet<u8> = get_block_at(x, y, &board);
+	let column_values: HashSet<u8> = get_col_at(x, &board);
+	let row_values: HashSet<u8> = board[y].iter().cloned().collect();
 
 	possibilities = possibilities.difference(&block_values).cloned().collect();
 	possibilities = possibilities.difference(&column_values).cloned().collect();
@@ -108,12 +84,11 @@ fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Option<Vec<Vec<u8>>> {
 				continue;
 			}
 
-			let possibilities = get_possibilities_at(x, y, &input);
-			let mut filtered_possibilities = possibilities.clone();
+			let mut possibilities = get_possibilities_at(x, y, &input);
 
 			// See if the remaining possibilities can go anywhere else. If they can't, we've found the value for this cell
 			if possibilities.len() > 1 {
-				for poss in possibilities.iter() {
+				for poss in possibilities.clone().iter() {
 					let mut multi_row: bool = false;
 					let mut multi_col: bool = false;
 					let mut multi_blk: bool = false;
@@ -154,7 +129,7 @@ fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Option<Vec<Vec<u8>>> {
 					let top = y - (y % 3);
 
 					// Can this value go anywhere in the block it's in?
-					for block_y in (top..top + 3) {
+					'columns: for block_y in (top..top + 3) {
 						for block_x in (left..left + 3) {
 							if (block_x == x && block_y == y) || input[block_y][block_x] > 0 {
 								continue;
@@ -162,27 +137,22 @@ fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Option<Vec<Vec<u8>>> {
 
 							multi_blk = get_possibilities_at(block_x, block_y, &input).contains(poss);
 
+							// Break out of both nested loops
 							if multi_blk {
-								break;
+								break 'columns;
 							}
 						}
-
-						if multi_blk {
-							break;
-						}
 					}
 
+					// If this number can go in two or more places, it's not longer a possibility
 					if multi_row && multi_col && multi_blk {
-						filtered_possibilities.remove(poss);
+						possibilities.remove(poss);
 					}
 				}
+			}
 
-				if filtered_possibilities.len() == 1 {
-					*(new_board.get_mut(y).unwrap().get_mut(x).unwrap()) = *filtered_possibilities.iter().nth(0).unwrap();
-
-					solves += 1;
-				}
-			} else if possibilities.len() == 1 {
+			// If there's only one possibility left, it must be the value for this cell
+			if possibilities.len() == 1 {
 				*(new_board.get_mut(y).unwrap().get_mut(x).unwrap()) = *possibilities.iter().nth(0).unwrap();
 
 				solves += 1;
