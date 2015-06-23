@@ -210,27 +210,25 @@ fn main() {
 		vec![ 5,0,0,0,3,0,0,0,2 ],
 	];
 
-	// let field = board_possibilities_field(&input_board);
-
-	let mut new_board: Vec<Vec<u8>> = input_board.clone();
+	let mut board: Vec<Vec<u8>> = input_board.clone();
 
 	println!("Original problem:\n");
 
-	print_board(&new_board);
+	print_board(&board);
 
 	println!("");
 
 	let mut num_iterations = 1;
 
 	loop {
-		match board_possibilities_field(&new_board) {
-			Some(updated) => {
-				new_board = updated;
+		match board_possibilities_field(&board) {
+			Some(updated_board) => {
+				board = updated_board;
 			},
 			None => {
 				println!("Solution complete:\n");
 
-				print_board(&new_board);
+				print_board(&board);
 
 				break;
 			}
