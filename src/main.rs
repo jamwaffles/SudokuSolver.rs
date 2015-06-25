@@ -2,17 +2,7 @@ use std::collections::HashSet;
 
 fn print_board(board: &Vec<Vec<u8>>) {
 	for (i, row) in board.iter().enumerate() {
-		println!("{} {} {} ┃ {} {} {} ┃ {} {} {}", 
-			row[0],
-			row[1],
-			row[2],
-			row[3],
-			row[4],
-			row[5],
-			row[6],
-			row[7],
-			row[8]
-		);
+		println!("{} {} {} ┃ {} {} {} ┃ {} {} {}", row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]);
 
 		if i % 3 == 2 && i != 8 {
 			println!("━━━━━━╋━━━━━━━╋━━━━━━");
@@ -20,39 +10,25 @@ fn print_board(board: &Vec<Vec<u8>>) {
 	}
 }
 
-fn get_col_at(index: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
-	let mut values = HashSet::new();
-
-	for row in grid.iter() {
-		match row[index] as u8 {
-			0 => continue,
-			1...9 => values.insert(row[index]),
-			_ => panic!("Value out of bounds")
-		};
-	}
-
-	values
-}
-
 // Get all non-zero numbers inside a block
 fn get_block_at(x: usize, y: usize, grid: &Vec<Vec<u8>>) -> HashSet<u8> {
-	let mut block = HashSet::new();
-
 	// Figure out top left corner of block
 	// Thanks to http://stackoverflow.com/a/13082705/383609 because I'm a dumbass
 	let left = x - (x % 3);
 	let top = y - (y % 3);
 
-	let mut rows = Vec::new();
+	let rows = vec![
+		grid[top].clone(),
+		grid[top + 1].clone(),
+		grid[top + 2].clone()
+	];
 
-	rows.push(grid[top].clone());
-	rows.push(grid[top + 1].clone());
-	rows.push(grid[top + 2].clone());
+	let mut block = HashSet::new();
 
 	for row in rows.iter() {
-		block.insert(row[left].clone());
-		block.insert(row[left + 1].clone());
-		block.insert(row[left + 2].clone());
+		block.insert(row[left]);
+		block.insert(row[left + 1]);
+		block.insert(row[left + 2]);
 	}
 
 	block
@@ -63,7 +39,7 @@ fn get_possibilities_at(x: usize, y: usize, board: &Vec<Vec<u8>>) -> HashSet<u8>
 	let mut possibilities: HashSet<u8> = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ].iter().cloned().collect();
 
 	let block_values: HashSet<u8> = get_block_at(x, y, &board);
-	let column_values: HashSet<u8> = get_col_at(x, &board);
+	let column_values: HashSet<u8> = board.iter().map(|row| row[x]).collect();
 	let row_values: HashSet<u8> = board[y].iter().cloned().collect();
 
 	possibilities = possibilities.difference(&block_values).cloned().collect();
@@ -73,7 +49,7 @@ fn get_possibilities_at(x: usize, y: usize, board: &Vec<Vec<u8>>) -> HashSet<u8>
 	possibilities
 }
 
-fn board_possibilities_field(input: &Vec<Vec<u8>>) -> Option<Vec<Vec<u8>>> {
+fn solve_board_iteration(input: &Vec<Vec<u8>>) -> Option<Vec<Vec<u8>>> {
 	let mut solves = 0;
 	let mut new_board = input.clone();
 
@@ -191,7 +167,7 @@ fn main() {
 	let mut num_iterations = 1;
 
 	loop {
-		match board_possibilities_field(&board) {
+		match solve_board_iteration(&board) {
 			Some(updated_board) => {
 				board = updated_board;
 			},
