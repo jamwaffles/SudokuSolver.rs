@@ -10,7 +10,14 @@ fn main() {
 
 	puzzle.solve();
 
-	println!("Puzzle solved, took {} iterations", puzzle.iterations_to_solve);
+	println!("Finished {} iterations", puzzle.iterations_to_solve);
+
+	if puzzle.num_unsolved > 0 {
+		println!("Puzzle unsolved; {} cells left", puzzle.num_unsolved);
+	} else {
+		println!("Solved!");
+	}
+
 	println!("");
 
 	puzzle.print_board();

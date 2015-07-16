@@ -4,14 +4,16 @@ use std::io::{ Read };
 
 pub struct Board {
 	board: [ [ u8; 9 ]; 9 ],
-	pub iterations_to_solve: u16
+	pub iterations_to_solve: u16,
+	pub num_unsolved: u8
 }
 
 impl Board {
 	pub fn new(input_board: &[ [ u8; 9 ]; 9 ]) -> Board {
 		Board {
 			board: input_board.clone(),
-			iterations_to_solve: 0
+			iterations_to_solve: 0,
+			num_unsolved: 0
 		}
 	}
 
@@ -30,7 +32,11 @@ impl Board {
 			self.iterations_to_solve += 1;
 
 			match self.solve_board_iteration() {
-				Some(updated_board) => self.board = updated_board,
+				Some(updated_board) => {
+					self.board = updated_board;
+
+					self.num_unsolved = self.count_unsolved();
+				},
 				None => break
 			};
 		};
@@ -74,8 +80,23 @@ impl Board {
 
 		Board {
 			board: grid,
-			iterations_to_solve: 0
+			iterations_to_solve: 0,
+			num_unsolved: 0
 		}
+	}
+
+	fn count_unsolved(&self) -> u8 {
+		let mut empty = 0;
+
+		for row in &self.board {
+			for &col in row {
+				if(col == 0) {
+					empty += 1;
+				}
+			}
+		}
+
+		empty
 	}
 
 	fn get_block_at(&self, x: usize, y: usize) -> HashSet<u8> {
