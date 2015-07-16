@@ -1,12 +1,14 @@
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::{ Read };
 
 pub struct Board {
-	board: Vec<Vec<u8>>,
+	board: [ [ u8; 9 ]; 9 ],
 	pub iterations_to_solve: u16
 }
 
 impl Board {
-	pub fn new(input_board: &Vec<Vec<u8>>) -> Board {
+	pub fn new(input_board: &[ [ u8; 9 ]; 9 ]) -> Board {
 		Board {
 			board: input_board.clone(),
 			iterations_to_solve: 0
@@ -32,6 +34,48 @@ impl Board {
 				None => break
 			};
 		};
+	}
+
+	pub fn import(path: &str) -> Board {
+		let mut file = File::open(&path).unwrap();
+		let mut content = String::new();
+		let mut grid = [ [ 0u8; 9 ]; 9 ]; 
+
+		file.read_to_string(&mut content).unwrap();
+
+		let mut index = 0;
+
+		for c in content.chars() {
+			match c {
+				// An empty but valid cell
+				' ' | '.' => {
+					index += 1;
+				},
+
+				// Any other char
+				_ => {
+					// Look for an integer
+					match c.to_string().parse::<u8>() {
+						Ok(n) => {
+							let col = index / 9;
+							let row = index - (col * 9);
+
+							grid[col][row] = n;
+
+							index += 1;
+						},
+
+						// If it's a junk char like a cell divider or grid char, do nothing
+						_ => continue
+					}
+				}
+			}
+		};
+
+		Board {
+			board: grid,
+			iterations_to_solve: 0
+		}
 	}
 
 	fn get_block_at(&self, x: usize, y: usize) -> HashSet<u8> {
@@ -71,7 +115,7 @@ impl Board {
 		possibilities
 	}
 
-	fn solve_board_iteration(&self) -> Option<Vec<Vec<u8>>> {
+	fn solve_board_iteration(&self) -> Option<[ [ u8; 9 ]; 9 ]> {
 		let mut solves = 0;
 		let mut new_board = self.board.clone();
 
@@ -151,7 +195,7 @@ impl Board {
 
 				// If there's only one possibility left, it must be the value for this cell
 				if possibilities.len() == 1 {
-					*(new_board.get_mut(y).unwrap().get_mut(x).unwrap()) = *possibilities.iter().nth(0).unwrap();
+					new_board[y][x] = *possibilities.iter().nth(0).unwrap();
 
 					solves += 1;
 				}
